@@ -1,0 +1,7 @@
+* Generate fractals
+
+* TODO 
+
+- [ ] Update readme
+- [ ] Update TODO task description
+- [ ] Learn Rust properly
