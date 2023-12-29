@@ -10,9 +10,9 @@ struct Color {
 }
 
 // TODO clean up
-const WIDTH: u32 = 1920;
-const HEIGHT: u32 = 1920;
-const MAX_ITER: u32 = 150;
+const WIDTH: u32 = 5000;
+const HEIGHT: u32 = 5000;
+const MAX_ITER: u32 = 300;
 const OUTPUT_VIDEO_FILE: &str = "julia_set_video.mp4";
 const FRAME_RATE: u32 = 60;
 
@@ -58,18 +58,7 @@ fn generate_julia_set_image(color: &Color, c: &Complex<f64>) -> RgbaImage {
     img
 }
 
-fn main() {
-    // let img = generate_julia_set_image(
-    //     &Color { r: 7, b: 30, g: 5 },
-    //     &Complex {
-    //         re: -0.8,
-    //         im: -0.156,
-    //     },
-    // );
-    // img.save("1.png").unwrap();
-    // return;
-    //
-    // TODO separate into its own function
+fn gen_video() {
     let frame_count = 1000; // Adjust as needed
     let color_start = Color { r: 9, g: 1, b: 26 };
     let color_step = Color { r: 1, g: 1, b: 1 };
@@ -125,4 +114,20 @@ fn main() {
     Command::new("sh").arg("-c").arg("rm *.png").output().ok();
 
     println!("Video saved as {}", OUTPUT_VIDEO_FILE);
+}
+
+fn gen_picture() -> RgbaImage {
+    let c = Complex {
+        re: -0.7,
+        im: -0.27015,
+    };
+    let color = Color { r: 9, g: 3, b: 13 };
+    let img = generate_julia_set_image(&color, &c);
+    img.save("1.png").unwrap();
+    return img;
+}
+
+fn main() {
+    let _ = gen_picture();
+    return;
 }
