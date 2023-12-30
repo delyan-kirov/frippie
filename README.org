@@ -5,3 +5,4 @@
 - [ ] Update readme
 - [ ] Update TODO task description
 - [ ] Learn Rust properly
+- [ ] Create a function that computes the difference between two Rgbmaps. 
