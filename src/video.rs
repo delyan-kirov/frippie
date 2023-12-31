@@ -10,8 +10,8 @@ use std::process::Command;
 
 fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<u8> {
     let mut z = Complex {
-        re: (x as f64 - WIDTH as f64 / 2.0) / (WIDTH as f64 / 4.0),
-        im: (y as f64 - HEIGHT as f64 / 2.0) / (HEIGHT as f64 / 4.0),
+        re: (x as f64 - WIDTH as f64 / 2.0) / (WIDTH as f64 / 4.0) * ZOOM,
+        im: (y as f64 - HEIGHT as f64 / 2.0) / (HEIGHT as f64 / 4.0) * ZOOM,
     };
     let mut iter = 0;
 
@@ -60,8 +60,8 @@ fn svg_resize(
 
     // Modify the width and height attributes
     let modified_svg_content = svg_content
-        .replace(r#"width="800""#, &format!(r#"width="{}""#, width))
-        .replace(r#"height="800""#, &format!(r#"height="{}""#, height))
+        .replace(r#"width="400""#, &format!(r#"width="{}""#, width))
+        .replace(r#"height="400""#, &format!(r#"height="{}""#, height))
         .replace(
             r#"<svg"#,
             &format!(r#"<svg viewBox="0 0 {} {}""#, WIDTH, HEIGHT),
@@ -132,7 +132,7 @@ pub fn gen_video() {
     println!("Video saved as {}", OUTPUT_VIDEO_FILE);
 }
 
-fn gen_picture() -> RgbaImage {
+fn _gen_picture() -> RgbaImage {
     let img = gen_image(&COLOR_START, &C_START);
     img.save("1.png").unwrap();
     return img;
