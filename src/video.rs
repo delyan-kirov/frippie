@@ -40,6 +40,10 @@ fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<
     }
 }
 
+fn _gen_ellipse() {
+    todo!()
+}
+
 fn gen_image(color: &Color, c: &Complex<f64>) -> RgbaImage {
     let mut img = RgbaImage::new(WIDTH, HEIGHT);
 
