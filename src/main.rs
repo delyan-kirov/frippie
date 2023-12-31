@@ -1,7 +1,7 @@
 use image::{Rgba, RgbaImage};
 use num_complex::Complex;
 use rayon::prelude::*;
-use std::{fmt::format, process::Command};
+use std::process::Command;
 
 struct Color {
     r: u32,
@@ -15,6 +15,15 @@ const HEIGHT: u32 = 400;
 const MAX_ITER: u32 = 50;
 const OUTPUT_VIDEO_FILE: &str = "julia_set_video.mp4";
 const FRAME_RATE: u32 = 30;
+//
+const FRAME_COUNT: u32 = 20;
+const COLOR_START: Color = Color { r: 9, g: 1, b: 26 };
+const COLOR_STEP: Color = Color { r: 1, g: 1, b: 1 };
+const C_START: Complex<f64> = Complex { re: 0.8, im: 1.3 };
+const C_STEP: Complex<f64> = Complex {
+    re: 0.001,
+    im: 0.001,
+};
 
 fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<u8> {
     let mut z = Complex {
@@ -59,27 +68,17 @@ fn generate_julia_set_image(color: &Color, c: &Complex<f64>) -> RgbaImage {
 }
 
 fn gen_video() {
-    let frame_count = 100; // Adjust as needed
-    let color_start = Color { r: 9, g: 1, b: 26 };
-    let color_step = Color { r: 1, g: 1, b: 1 };
-
-    let c_start = Complex { re: 0.8, im: 0.6 };
-    let c_step = Complex {
-        re: 0.000001,
-        im: 0.000001,
-    };
-
     // generate image frames
-    for i in 0..frame_count {
+    for i in 0..FRAME_COUNT {
         let color = Color {
-            r: (color_start.r as u32 + i % 30 as u32 * color_step.r as u32) as u32,
-            g: (color_start.g as u32 + i % 3 as u32 * color_step.g as u32) as u32,
-            b: (color_start.b as u32 + i % 40 as u32 * color_step.b as u32) as u32,
+            r: (COLOR_START.r as u32 + i % 30 as u32 * COLOR_STEP.r as u32) as u32,
+            g: (COLOR_START.g as u32 + i % 3 as u32 * COLOR_STEP.g as u32) as u32,
+            b: (COLOR_START.b as u32 + i % 40 as u32 * COLOR_STEP.b as u32) as u32,
         };
 
         let c = Complex {
-            re: c_start.re + i as f64 * c_step.re,
-            im: c_start.im + i as f64 * c_step.im,
+            re: C_START.re + i as f64 * C_STEP.re,
+            im: C_START.im + i as f64 * C_STEP.im,
         };
 
         let img = generate_julia_set_image(&color, &c);
@@ -91,14 +90,6 @@ fn gen_video() {
         Command::new("vtracer")
             .arg(format!("--input=frame_{:04}.png", i))
             .arg(format!("--output=frame_{:04}.svg", i))
-            .output()
-            .ok();
-
-        Command::new("rsvg-convert")
-            .arg(format!("frame_{:04}.svg", i))
-            .arg(format!("--output=frame_{:04}.svg", i))
-            .arg("--width=600") // Specify the desired width
-            .arg("--height=600") // Specify the desired height
             .output()
             .ok();
     }
@@ -125,17 +116,13 @@ fn gen_video() {
         .expect("Failed to create video");
     dbg!(r);
     Command::new("sh").arg("-c").arg("rm *.png").output().ok();
+    Command::new("sh").arg("-c").arg("rm *.svg").output().ok();
 
     println!("Video saved as {}", OUTPUT_VIDEO_FILE);
 }
 
 fn gen_picture() -> RgbaImage {
-    let c = Complex {
-        re: -0.8,
-        im: 0.156,
-    };
-    let color = Color { r: 8, g: 2, b: 5 };
-    let img = generate_julia_set_image(&color, &c);
+    let img = generate_julia_set_image(&COLOR_START, &C_START);
     img.save("1.png").unwrap();
     return img;
 }
