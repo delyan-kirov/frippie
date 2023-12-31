@@ -8,10 +8,14 @@ use std::fs::{read_to_string, write};
 use std::path as Dir;
 use std::process::Command;
 
+const ZOOM_WIDTH: f64 = (WIDTH as f64 / 4.0) / ZOOM;
+const ZOOM_HEIGHT: f64 = (WIDTH as f64 / 4.0) / ZOOM;
+
+#[inline]
 fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<u8> {
     let mut z = Complex {
-        re: (x as f64 - WIDTH as f64 / 2.0) / (WIDTH as f64 / 4.0) * ZOOM,
-        im: (y as f64 - HEIGHT as f64 / 2.0) / (HEIGHT as f64 / 4.0) * ZOOM,
+        re: (x as f64 - WIDTH as f64 / 2.0) / ZOOM_WIDTH,
+        im: (y as f64 - HEIGHT as f64 / 2.0) / ZOOM_HEIGHT,
     };
     let mut iter = 0;
 
@@ -25,7 +29,7 @@ fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<
     }
 
     // Map the iteration count to a custom color
-    let color = match iter {
+    match iter {
         MAX_ITER => Rgba([0, 0, 0, 255]), // Black for points in the set
         _ => Rgba([
             ((iter * color.r) * 250 / MAX_ITER) as u8,
@@ -33,9 +37,7 @@ fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<
             ((iter * color.b) * 250 / MAX_ITER) as u8,
             250 as u8,
         ]), // Custom color mapping
-    };
-
-    color
+    }
 }
 
 fn gen_image(color: &Color, c: &Complex<f64>) -> RgbaImage {
@@ -44,8 +46,7 @@ fn gen_image(color: &Color, c: &Complex<f64>) -> RgbaImage {
     img.enumerate_pixels_mut()
         .par_bridge()
         .for_each(|(x, y, pixel)| {
-            let color = julia_set_pixel(x as usize, y as usize, color, c);
-            *pixel = color;
+            *pixel = julia_set_pixel(x as usize, y as usize, color, c);
         });
 
     img
@@ -60,8 +61,14 @@ fn svg_resize(
 
     // Modify the width and height attributes
     let modified_svg_content = svg_content
-        .replace(r#"width="400""#, &format!(r#"width="{}""#, width))
-        .replace(r#"height="400""#, &format!(r#"height="{}""#, height))
+        .replace(
+            &format!(r#"width="{}""#, WIDTH),
+            &format!(r#"width="{}""#, width),
+        )
+        .replace(
+            &format!(r#"height="{}""#, HEIGHT),
+            &format!(r#"height="{}""#, height),
+        )
         .replace(
             r#"<svg"#,
             &format!(r#"<svg viewBox="0 0 {} {}""#, WIDTH, HEIGHT),
@@ -74,7 +81,7 @@ fn svg_resize(
 
 pub fn gen_video() {
     // generate image frames
-    for i in 0..FRAME_COUNT {
+    (0..FRAME_COUNT).into_par_iter().for_each(|i| {
         let color = Color {
             r: (COLOR_START.r as u32 + i % 32 as u32 * COLOR_STEP.r as u32) as u32,
             g: (COLOR_START.g as u32 + i % 32 as u32 * COLOR_STEP.g as u32) as u32,
@@ -103,7 +110,7 @@ pub fn gen_video() {
             SVG_WIDTH,
             SVG_HEIGHT,
         );
-    }
+    });
     // remove mp4 files
     Command::new("sh")
         .arg("-c")
