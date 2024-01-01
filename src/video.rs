@@ -10,6 +10,8 @@ use std::process::Command;
 
 const ZOOM_WIDTH: f64 = (WIDTH as f64 / 4.0) / ZOOM;
 const ZOOM_HEIGHT: f64 = (WIDTH as f64 / 4.0) / ZOOM;
+const BOUNDARY_MAX_ITER: usize = 100;
+const ESCAPE_RADIUS: f64 = 2.0;
 
 #[inline]
 fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<u8> {
@@ -38,10 +40,6 @@ fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<
             250 as u8,
         ]), // Custom color mapping
     }
-}
-
-fn _gen_ellipse() {
-    todo!()
 }
 
 fn gen_image(color: &Color, c: &Complex<f64>) -> RgbaImage {
@@ -84,14 +82,13 @@ fn svg_resize(
 }
 
 pub fn gen_video() {
+    let color = Color {
+        r: (COLOR_START.r as u32 as u32 * COLOR_STEP.r as u32) as u32,
+        g: (COLOR_START.g as u32 as u32 * COLOR_STEP.g as u32) as u32,
+        b: (COLOR_START.b as u32 as u32 * COLOR_STEP.b as u32) as u32,
+    };
     // generate image frames
     (0..FRAME_COUNT).into_par_iter().for_each(|i| {
-        let color = Color {
-            r: (COLOR_START.r as u32 + i % 32 as u32 * COLOR_STEP.r as u32) as u32,
-            g: (COLOR_START.g as u32 + i % 32 as u32 * COLOR_STEP.g as u32) as u32,
-            b: (COLOR_START.b as u32 + i % 32 as u32 * COLOR_STEP.b as u32) as u32,
-        };
-
         let c = Complex {
             re: C_START.re + i as f64 * C_STEP.re,
             im: C_START.im + i as f64 * C_STEP.im,
