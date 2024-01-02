@@ -3,15 +3,16 @@ pub mod params;
 use image::{Rgba, RgbaImage};
 use num_complex::Complex;
 use params::*;
+use plotters::prelude::{self as Plt, IntoDrawingArea};
 use rayon::prelude::*;
 use std::fs::{read_to_string, write};
 use std::path as Dir;
 use std::process::Command;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::SeqCst;
 
 const ZOOM_WIDTH: f64 = (WIDTH as f64 / 4.0) / ZOOM;
 const ZOOM_HEIGHT: f64 = (WIDTH as f64 / 4.0) / ZOOM;
-const BOUNDARY_MAX_ITER: usize = 100;
-const ESCAPE_RADIUS: f64 = 2.0;
 
 #[inline]
 fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<u8> {
@@ -144,4 +145,68 @@ fn _gen_picture() -> RgbaImage {
     let img = gen_image(&COLOR_START, &C_START);
     img.save("1.png").unwrap();
     return img;
+}
+
+pub fn boundary(epsilon: usize) -> Vec<Complex<f64>> {
+    fn gen_circ(num_points: usize) -> Vec<Complex<f64>> {
+        let mut circle = Vec::with_capacity(num_points);
+
+        for i in 0..num_points {
+            let theta = 2.0 * std::f64::consts::PI * (i as f64) / (num_points as f64);
+            let x = theta.cos();
+            let y = theta.sin();
+            circle.push(Complex::new(x, y));
+        }
+
+        circle
+    }
+    fn within_epsilon(c: &Complex<f64>, epsilon: &usize) -> bool {
+        let mut z = Complex::new(0.0, 0.0);
+        let c1 = c.clone().scale(1.0 / (*epsilon as f64));
+        for _ in 0..50 {
+            z = z * z + c1;
+            if z.norm_sqr() > 4.0 {
+                return false;
+            }
+        }
+        true
+    }
+    //
+    let mut circ = gen_circ(100);
+
+    let call_count: AtomicUsize = AtomicUsize::new(0);
+    loop {
+        circ.par_iter_mut().for_each(|z| {
+            if !within_epsilon(&z, &epsilon) {
+                *z *= 1.0 / epsilon as f64;
+            } else {
+                call_count.fetch_add(1, SeqCst);
+            }
+        });
+        if call_count.load(SeqCst) == circ.len() {
+            break;
+        } else {
+            call_count.store(0, SeqCst);
+        }
+    }
+    return circ;
+}
+
+pub fn plot_points(points: Vec<Complex<f64>>) {
+    // Define the chart area
+    let root = Plt::BitMapBackend::new("plot.png", (640, 480)).into_drawing_area();
+
+    // Create a chart
+    let mut chart = Plt::ChartBuilder::on(&root)
+        .margin(5)
+        .set_all_label_area_size(30)
+        .build_cartesian_2d(-2.0..2.0, -2.0..2.0)
+        .unwrap();
+
+    // Plot the complex points
+    let _ = chart.draw_series(
+        points
+            .iter()
+            .map(|&c| Plt::Circle::new((c.re, c.im), 3, Plt::BLACK)),
+    );
 }

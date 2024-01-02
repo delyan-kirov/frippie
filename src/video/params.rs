@@ -15,7 +15,7 @@ pub const FRAME_RATE: u32 = 30;
 pub const _VIDEO_RESOLUTION: (u16, u16) = (1200, 1200);
 //
 pub const FRAME_COUNT: u32 = 1000;
-pub const COLOR_START: Color = Color { r: 22, g: 3, b: 39 };
+pub const COLOR_START: Color = Color { r: 12, g: 3, b: 30 };
 pub const COLOR_STEP: Color = Color { r: 1, g: 1, b: 1 };
 pub const C_START: Complex<f64> = Complex {
     re: -0.787,
