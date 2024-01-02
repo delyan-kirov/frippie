@@ -163,9 +163,9 @@ pub fn boundary(epsilon: usize) -> Vec<Complex<f64>> {
     fn within_epsilon(c: &Complex<f64>, epsilon: &usize) -> bool {
         let mut z = Complex::new(0.0, 0.0);
         let c1 = c.clone().scale(1.0 / (*epsilon as f64));
-        for _ in 0..50 {
+        for _ in 0..100 {
             z = z * z + c1;
-            if z.norm_sqr() > 4.0 {
+            if z.norm() > 2.0 {
                 return false;
             }
         }
@@ -173,6 +173,7 @@ pub fn boundary(epsilon: usize) -> Vec<Complex<f64>> {
     }
     //
     let mut circ = gen_circ(100);
+    return circ;
 
     let call_count: AtomicUsize = AtomicUsize::new(0);
     loop {
@@ -184,6 +185,7 @@ pub fn boundary(epsilon: usize) -> Vec<Complex<f64>> {
             }
         });
         if call_count.load(SeqCst) == circ.len() {
+            // dbg!(&call_count);
             break;
         } else {
             call_count.store(0, SeqCst);

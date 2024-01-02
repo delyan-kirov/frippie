@@ -1,8 +1,13 @@
 * Generate fractals
 
+* Examples
+
+* How to run
+
 * TODO 
 
 - [ ] Update readme
-- [ ] Update TODO task description
 - [ ] Learn Rust properly
+- [ ] Update the plot function
+- [ ] Debug the boundary function
 - [ ] Create a function that computes the difference between two Rgbmaps. 
