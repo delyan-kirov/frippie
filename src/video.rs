@@ -10,46 +10,47 @@ use std::path as Dir;
 use std::process::Command;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
+use std::sync::{Arc, Mutex};
 
 const ZOOM_WIDTH: f64 = (WIDTH as f64 / 4.0) / ZOOM;
 const ZOOM_HEIGHT: f64 = (WIDTH as f64 / 4.0) / ZOOM;
 
 #[inline]
-fn julia_set_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<u8> {
-    let mut z = Complex {
-        re: (x as f64 - WIDTH as f64 / 2.0) / ZOOM_WIDTH,
-        im: (y as f64 - HEIGHT as f64 / 2.0) / ZOOM_HEIGHT,
-    };
-    let mut iter = 0;
-
-    // iteration step
-    while iter < MAX_ITER {
-        z = z * z + c;
-        if z.norm() > 2.0 {
-            break;
-        }
-        iter += 1;
-    }
-
-    // Map the iteration count to a custom color
-    match iter {
-        MAX_ITER => Rgba([0, 0, 0, 255]), // Black for points in the set
-        _ => Rgba([
-            ((iter * color.r) * 250 / MAX_ITER) as u8,
-            ((iter * color.g) * 250 / MAX_ITER) as u8,
-            ((iter * color.b) * 250 / MAX_ITER) as u8,
-            250 as u8,
-        ]), // Custom color mapping
-    }
-}
 
 fn gen_image(color: &Color, c: &Complex<f64>) -> RgbaImage {
+    fn gen_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<u8> {
+        let mut z = Complex {
+            re: (x as f64 - WIDTH as f64 / 2.0) / ZOOM_WIDTH,
+            im: (y as f64 - HEIGHT as f64 / 2.0) / ZOOM_HEIGHT,
+        };
+        let mut iter = 0;
+
+        // iteration step
+        while iter < MAX_ITER {
+            z = z * z + c;
+            if z.norm() > 2.0 {
+                break;
+            }
+            iter += 1;
+        }
+
+        // Map the iteration count to a custom color
+        match iter {
+            MAX_ITER => Rgba([0, 0, 0, 255]), // Black for points in the set
+            _ => Rgba([
+                ((iter * color.r) * 250 / MAX_ITER) as u8,
+                ((iter * color.g) * 250 / MAX_ITER) as u8,
+                ((iter * color.b) * 250 / MAX_ITER) as u8,
+                250 as u8,
+            ]), // Custom color mapping
+        }
+    }
     let mut img = RgbaImage::new(WIDTH, HEIGHT);
 
     img.enumerate_pixels_mut()
         .par_bridge()
         .for_each(|(x, y, pixel)| {
-            *pixel = julia_set_pixel(x as usize, y as usize, color, c);
+            *pixel = gen_pixel(x as usize, y as usize, color, c);
         });
 
     img
@@ -83,12 +84,14 @@ fn svg_resize(
 }
 
 pub fn gen_video() {
+    let frames: Arc<Mutex<Vec<RgbaImage>>> = Arc::new(Mutex::new(Vec::new()));
     let color = Color {
         r: (COLOR_START.r as u32 as u32 * COLOR_STEP.r as u32) as u32,
         g: (COLOR_START.g as u32 as u32 * COLOR_STEP.g as u32) as u32,
         b: (COLOR_START.b as u32 as u32 * COLOR_STEP.b as u32) as u32,
     };
     // generate image frames
+    // TODO: refactor the code such that the Rgba images are stored in an array
     (0..FRAME_COUNT).into_par_iter().for_each(|i| {
         let c = Complex {
             re: C_START.re + i as f64 * C_STEP.re,
@@ -99,6 +102,9 @@ pub fn gen_video() {
 
         let filename = format!("frame_{:04}.png", i);
         img.save(&filename).unwrap();
+
+        // collect frames
+        frames.lock().unwrap().push(img);
 
         // transform images to svg files
         Command::new("vtracer")
@@ -141,10 +147,17 @@ pub fn gen_video() {
     println!("Video saved as {}", OUTPUT_VIDEO_FILE);
 }
 
-fn _gen_picture() -> RgbaImage {
+fn gen_picture() {
     let img = gen_image(&COLOR_START, &C_START);
     img.save("1.png").unwrap();
-    return img;
+}
+
+// function that adds additional frames to improve frame rate
+fn pad_frames(frames: Vec<Vec<Complex<f64>>>, padding: usize) {
+    fn frame_diff(frame1: Vec<f64>, frame2: Vec<f64>) {
+        todo!()
+    }
+    todo!()
 }
 
 pub fn boundary(epsilon: usize) -> Vec<Complex<f64>> {
