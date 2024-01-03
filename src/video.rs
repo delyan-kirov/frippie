@@ -8,15 +8,12 @@ use rayon::prelude::*;
 use std::fs::{read_to_string, write};
 use std::path as Dir;
 use std::process::Command;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::SeqCst;
 use std::sync::{Arc, Mutex};
 
 const ZOOM_WIDTH: f64 = (WIDTH as f64 / 4.0) / ZOOM;
 const ZOOM_HEIGHT: f64 = (WIDTH as f64 / 4.0) / ZOOM;
 
 #[inline]
-
 fn gen_image(color: &Color, c: &Complex<f64>) -> RgbaImage {
     fn gen_pixel(x: usize, y: usize, color: &Color, c: &Complex<f64>) -> Rgba<u8> {
         let mut z = Complex {
@@ -161,6 +158,7 @@ fn pad_frames(frames: Vec<Vec<Complex<f64>>>, padding: usize) {
 }
 
 pub fn boundary(epsilon: usize) -> Vec<Complex<f64>> {
+    #[inline]
     fn gen_circ(num_points: usize) -> Vec<Complex<f64>> {
         let mut circle = Vec::with_capacity(num_points);
 
@@ -173,43 +171,51 @@ pub fn boundary(epsilon: usize) -> Vec<Complex<f64>> {
 
         circle
     }
+    #[inline]
     fn within_epsilon(c: &Complex<f64>, epsilon: &usize) -> bool {
         let mut z = Complex::new(0.0, 0.0);
-        let c1 = c.clone().scale(1.0 / (*epsilon as f64));
+        let c1 = c.clone().scale((*epsilon as f64 - 1.0) / (*epsilon as f64));
+        dbg!(c1);
+        dbg!(c);
         for _ in 0..100 {
             z = z * z + c1;
+            dbg!(z.norm());
             if z.norm() > 2.0 {
                 return false;
             }
         }
+
+        println!("Got false");
         true
     }
     //
-    let mut circ = gen_circ(100);
-    return circ;
+    let mut circ = gen_circ(1000);
+    let mut count = 0 as usize;
 
-    let call_count: AtomicUsize = AtomicUsize::new(0);
+    plot_points(&circ.clone(), &format!("plot_{:04}.png", &count + 100));
     loop {
-        circ.par_iter_mut().for_each(|z| {
+        circ.iter_mut().for_each(|z| {
             if !within_epsilon(&z, &epsilon) {
-                *z *= 1.0 / epsilon as f64;
+                *z *= (epsilon as f64 - 1.0) / epsilon as f64;
             } else {
-                call_count.fetch_add(1, SeqCst);
+                count += 1;
             }
         });
-        if call_count.load(SeqCst) == circ.len() {
-            // dbg!(&call_count);
+        plot_points(&circ.clone(), &format!("plot_{:04}.png", &count));
+        if count == circ.len() {
+            dbg!(&count);
             break;
         } else {
-            call_count.store(0, SeqCst);
+            count = 0;
         }
     }
     return circ;
 }
 
-pub fn plot_points(points: Vec<Complex<f64>>) {
+pub fn plot_points(points: &Vec<Complex<f64>>, name: &String) {
     // Define the chart area
-    let root = Plt::BitMapBackend::new("plot.png", (640, 480)).into_drawing_area();
+    let root = Plt::BitMapBackend::new(name, (800, 800)).into_drawing_area();
+    root.fill(&Plt::WHITE).unwrap();
 
     // Create a chart
     let mut chart = Plt::ChartBuilder::on(&root)
@@ -218,10 +224,20 @@ pub fn plot_points(points: Vec<Complex<f64>>) {
         .build_cartesian_2d(-2.0..2.0, -2.0..2.0)
         .unwrap();
 
+    chart.configure_mesh().draw().unwrap();
+
     // Plot the complex points
-    let _ = chart.draw_series(
-        points
-            .iter()
-            .map(|&c| Plt::Circle::new((c.re, c.im), 3, Plt::BLACK)),
-    );
+    let _ = chart
+        .draw_series(Plt::LineSeries::new(
+            points.iter().map(|&c| (c.re, c.im)),
+            Plt::BLACK,
+        ))
+        .unwrap();
+
+    chart
+        .configure_series_labels()
+        .background_style(&Plt::WHITE)
+        .border_style(&Plt::BLACK)
+        .draw()
+        .unwrap();
 }
